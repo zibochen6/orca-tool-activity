@@ -288,7 +288,15 @@ module.exports = {
     buildResources: 'resources/build'
   },
   files: [
-    ...(activityVersion ? ['out/**/*', 'resources/**/*', 'LICENSE', 'package.json'] : []),
+    ...(activityVersion
+      ? [
+          'out/{cli,main,mobile-web,native,packages,preload,renderer,shared}/**/*',
+          'out/package.json',
+          'resources/**/*',
+          'LICENSE',
+          'package.json'
+        ]
+      : []),
     '!dist{,/**/*}',
     '!**/.vscode/*',
     // Repo inputs already bundled/copied through extraResources would bloat app.asar.
