@@ -57,6 +57,7 @@ execFileSync(
     '--arm64',
     '--publish',
     'never',
+    `-c.electronDist=${resolve('node_modules/electron/dist')}`,
     `-c.directories.output=${output}`
   ],
   { env, stdio: 'inherit' }
