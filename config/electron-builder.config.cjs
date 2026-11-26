@@ -135,6 +135,7 @@ const activityVersion = process.env.ORCA_TOOL_ACTIVITY_VERSION
 if (activityVersion && !/^\d+\.\d+\.\d+-activity\.[1-9]\d*$/.test(activityVersion)) {
   throw new Error('ORCA_TOOL_ACTIVITY_VERSION must have the form X.Y.Z-activity.N')
 }
+const activityProductName = 'Orca Tool Activity'
 const appId = activityVersion ? 'com.zibochen6.orca-tool-activity' : 'com.stablyai.orca'
 const featureWallResources = {
   from: 'resources/onboarding/feature-wall',
@@ -273,11 +274,11 @@ const ORCA_MAC_TEAM_ID = '6CX3WHS9HZ'
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId,
-  productName: activityVersion ? 'Orca Tool Activity' : 'Orca',
+  productName: activityVersion ? activityProductName : 'Orca',
   ...(activityVersion ? {} : { protocols: [{ name: 'Orca', schemes: ['orca'] }] }),
   toolsets: { appimage: '1.0.3' },
   ...(activityVersion
-    ? { extraMetadata: { version: activityVersion } }
+    ? { extraMetadata: { version: activityVersion, productName: activityProductName } }
     : devChannelBuildVersion
       ? { extraMetadata: { version: devChannelBuildVersion } }
       : localBuildVersion
