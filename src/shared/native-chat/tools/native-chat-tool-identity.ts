@@ -4,7 +4,14 @@ export type NativeChatWebSearchResult = { title: string; url: string }
 
 export type NativeChatMcpIdentity = { server: string; tool: string }
 
+export type NativeChatToolTiming = {
+  startedAt: number
+  endedAt?: number
+}
+
 export type NativeChatToolMetadata = {
+  /** Host-observed lifecycle, separate from the provider's execution duration. */
+  observedTiming?: NativeChatToolTiming
   mcpIdentity?: NativeChatMcpIdentity
   exitCode?: number
   durationMs?: number

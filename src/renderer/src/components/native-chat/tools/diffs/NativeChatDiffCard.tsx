@@ -1,5 +1,5 @@
 import { NativeChatExpandable } from '../../messages/disclosure/NativeChatExpandable'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useContext, useLayoutEffect, useMemo, useRef } from 'react'
 import { useNativeChatDisclosure } from '../../messages/disclosure/native-chat-disclosure-store'
 import { ChevronRight, FilePlus2, FileMinus2, FilePen } from 'lucide-react'
 import { cn } from '@/lib/class-names'
@@ -17,8 +17,24 @@ import {
   type NativeChatEditLine
 } from '../../../../../../shared/native-chat/tools/native-chat-edit-model'
 
-function VerbIcon({ kind }: { kind: NativeChatEditFile['changeKind'] }): React.JSX.Element {
-  const className = 'size-3.5 shrink-0 text-chat-foreground-faint'
+import type { NativeChatToolTiming } from '../../../../../../shared/native-chat/tools/native-chat-tool-identity'
+import {
+  NativeChatToolActivityContext,
+  useNativeChatToolDuration
+} from '../native-chat-tool-activity-context'
+import { nativeChatToolCategoryTone } from '../native-chat-tool-category-tone'
+
+function VerbIcon({
+  kind,
+  activity
+}: {
+  kind: NativeChatEditFile['changeKind']
+  activity: boolean
+}): React.JSX.Element {
+  const className = cn(
+    'size-3.5 shrink-0',
+    activity ? nativeChatToolCategoryTone.fileChange : 'text-chat-foreground-faint'
+  )
   if (kind === 'added') {
     return <FilePlus2 className={className} />
   }
@@ -115,12 +131,14 @@ function DiffCardRows({
 /** Render file edits without invented line numbers; header-only changes have no empty disclosure. */
 export function NativeChatDiffCard({
   file,
+  observedTiming,
   revealSignal,
   onReveal,
   disclosureKey,
   initialOpen = false
 }: {
   file: NativeChatEditFile
+  observedTiming?: NativeChatToolTiming
   revealSignal?: number
   onReveal?: (element: HTMLElement) => void
   /** Identity this card's open state is remembered under while it is unmounted. */
@@ -128,6 +146,8 @@ export function NativeChatDiffCard({
   initialOpen?: boolean
 }): React.JSX.Element {
   const t = useTranslate()
+  const { enabled } = useContext(NativeChatToolActivityContext)
+  const duration = useNativeChatToolDuration(enabled ? observedTiming : undefined)
   const { open: expanded, setOpen: setExpanded } = useNativeChatDisclosure(
     disclosureKey,
     initialOpen
@@ -157,7 +177,7 @@ export function NativeChatDiffCard({
           aria-expanded={hasBody ? expanded : undefined}
         >
           <span aria-hidden className="flex size-4 shrink-0 items-center justify-center">
-            <VerbIcon kind={file.changeKind} />
+            <VerbIcon kind={file.changeKind} activity={enabled} />
           </span>
           <span className="shrink-0 text-chat-foreground-faint">
             {nativeChatToolRowVerb(file.changeKind, t)}
@@ -183,6 +203,11 @@ export function NativeChatDiffCard({
             openable={file.changeKind !== 'deleted'}
           />
           <DiffLineCounts added={file.added} removed={file.removed} size="sm" />
+          {duration ? (
+            <span className="shrink-0 text-xs tabular-nums text-chat-foreground-faint">
+              {duration}
+            </span>
+          ) : null}
           {file.truncated ? (
             <span className="shrink-0 text-xs text-chat-foreground-faint">
               {t('components.native-chat.tool.diffTruncated', 'Diff truncated')}

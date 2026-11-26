@@ -21669,6 +21669,16 @@
         "signInForModels": "Sign in to see the models you can use."
       },
       "tool": {
+        "activityAgent": "Agent",
+        "activityCommand": "Command",
+        "activityEdit": "Edit",
+        "activityFailed": "Failed",
+        "activityInterrupted": "Interrupted",
+        "activityOther": "Other",
+        "activityPlan": "Plan",
+        "activityRead": "Read",
+        "activitySearch": "Search",
+        "activityWeb": "Web",
         "exitCode": "exit {{value0}}",
         "milliseconds": "{{value0}}ms",
         "result": "Result",

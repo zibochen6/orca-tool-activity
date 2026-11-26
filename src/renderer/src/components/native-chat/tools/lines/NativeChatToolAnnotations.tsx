@@ -29,12 +29,14 @@ export function NativeChatToolName({
 }
 
 export function NativeChatCommandMetadata({
-  block
+  block,
+  showDuration = true
 }: {
   block: NativeChatToolCallBlock
+  showDuration?: boolean
 }): React.JSX.Element | null {
   const t = useTranslate()
-  const duration = formatToolDuration(block.durationMs, (value0) =>
+  const duration = formatToolDuration(showDuration ? block.durationMs : undefined, (value0) =>
     t('components.native-chat.tool.milliseconds', '{{value0}}ms', { value0 })
   )
   const exitCode = Number.isSafeInteger(block.exitCode) ? block.exitCode : undefined

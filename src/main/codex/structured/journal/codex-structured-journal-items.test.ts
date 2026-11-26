@@ -1,6 +1,12 @@
 import { expect, it } from 'vitest'
 import { agentJournalItemKey } from '../../../../shared/agent-session/journal/agent-session-journal-item-key'
-import type { AgentJournalStatusItem } from '../../../../shared/agent-session/journal/agent-session-journal-types'
+import type {
+  AgentJournalStatusItem,
+  AgentJournalToolCallItem
+} from '../../../../shared/agent-session/journal/agent-session-journal-types'
+import { isAdmissibleAgentJournalItemBody } from '../../../../shared/agent-session/journal/agent-session-journal-schemas'
+import { structuredAgentSessionToolCallBlock } from '../../../../shared/agent-session/view/messages/structured-agent-session-tool-call-block'
+import { nativeChatToolRunTiming } from '../../../../shared/native-chat/tools/native-chat-tool-run-timing'
 import { CODEX_JOURNAL_ADMITTED } from './codex-structured-journal-contracts'
 import { createCodexJournalTranslator } from './codex-structured-journal-translation'
 import { CodexTurnFailures } from './codex-turn-failures'
@@ -79,4 +85,52 @@ it('journals Codex throttles as provider unavailability and quota errors as usag
     'providerUnavailable',
     'usageLimitReached'
   ])
+})
+
+it('round-trips observed tool timings and measures overlapping calls by their span', () => {
+  const rows = new Map<string, AgentJournalToolCallItem>()
+  const translator = createCodexJournalTranslator({
+    sink: {
+      appendItem: (identity, body) => {
+        if (body.kind === 'tool-call') {
+          const restored: unknown = JSON.parse(JSON.stringify(body))
+          if (isAdmissibleAgentJournalItemBody(restored) && restored.kind === 'tool-call') {
+            rows.set(agentJournalItemKey(identity), restored)
+          }
+        }
+      },
+      appendTombstone: () => {},
+      publish: () => {}
+    }
+  })
+  const send = (at: number, method: string, item: Record<string, unknown>): void => {
+    translator.handle({
+      type: 'notification',
+      sessionId: 's',
+      threadId: 't',
+      method,
+      observedAt: at,
+      params: { threadId: 't', turnId: 'turn-a', item }
+    })
+  }
+  const call = (id: string, status: string) => ({
+    type: 'commandExecution',
+    id,
+    command: 'pwd',
+    status
+  })
+  send(1000, 'item/started', call('first', 'inProgress'))
+  send(3000, 'item/started', call('second', 'inProgress'))
+  send(6000, 'item/completed', call('first', 'completed'))
+  send(8000, 'item/completed', call('second', 'completed'))
+  send(9000, 'item/completed', call('missing-start', 'completed'))
+
+  const blocks = [...rows].map(([id, row]) => structuredAgentSessionToolCallBlock(row, id))
+  expect(blocks.map((block) => block.observedTiming)).toEqual([
+    { startedAt: 1000, endedAt: 6000 },
+    { startedAt: 3000, endedAt: 8000 },
+    undefined
+  ])
+  expect(nativeChatToolRunTiming(blocks.slice(0, 2))).toEqual({ startedAt: 1000, endedAt: 8000 })
+  expect(nativeChatToolRunTiming(blocks)).toBeUndefined()
 })

@@ -21149,6 +21149,16 @@
         "retryChats": "重試"
       },
       "tool": {
+        "activityAgent": "子代理",
+        "activityCommand": "指令",
+        "activityEdit": "編輯",
+        "activityFailed": "失敗",
+        "activityInterrupted": "已中斷",
+        "activityOther": "其他",
+        "activityPlan": "計畫",
+        "activityRead": "讀取",
+        "activitySearch": "搜尋",
+        "activityWeb": "網頁",
         "exitCode": "結束碼 {{value0}}",
         "milliseconds": "{{value0}} ms",
         "result": "結果",

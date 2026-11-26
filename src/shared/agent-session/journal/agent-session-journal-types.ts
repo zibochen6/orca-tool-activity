@@ -15,7 +15,14 @@ import type { UnreadAgentSessionFailureFact } from '../failures/agent-session-fa
 import type { AgentSessionFailureRowWords } from '../failures/agent-session-failure-words'
 import type { AgentSessionQuestionAnswer } from '../requests/prompts/agent-session-question-answer'
 import type { AgentJournalTurnOutcome } from '../../agent-status/lifecycle/agent-turn-outcome'
-import type { NativeChatToolMetadata } from '../../native-chat/tools/native-chat-tool-identity'
+import type { AgentJournalDiffItem, AgentJournalToolCallItem } from './agent-journal-tool-items'
+export {
+  AGENT_JOURNAL_TOOL_CALL_ENDINGS,
+  type AgentJournalDiffItem,
+  type AgentJournalToolCallEnding,
+  type AgentJournalToolCallItem,
+  type AgentJournalToolCallState
+} from './agent-journal-tool-items'
 import type { AgentSessionContextUsage } from '../conversation-context/agent-session-context-usage'
 import type { NativeChatBlock, NativeChatRole } from '../../native-chat/native-chat-types'
 import type { AgentMessageSource } from './agent-session-message-source'
@@ -92,36 +99,6 @@ export type AgentJournalMessageItem = {
   /** Host-observed message/turn/stream end; absent for history or crash recovery without a live end, so no duration is claimed. */
   completedAt?: number
 } & AgentJournalBotMessageFields
-
-export type AgentJournalToolCallState = 'running' | 'completed' | 'failed'
-
-/** How a call that did not finish on its own ended, finer than its `failed` state. Persisted and
- *  open for growth: a reader that cannot place a value reads `state`. `unverifiable` is a call its
- *  session's end closed when nothing proved that end, so a later proof naming its owner finds it
- *  and revises it to `interrupted`, as it does the turn. */
-export const AGENT_JOURNAL_TOOL_CALL_ENDINGS = ['interrupted', 'unverifiable'] as const
-export type AgentJournalToolCallEnding = (typeof AGENT_JOURNAL_TOOL_CALL_ENDINGS)[number]
-
-export type AgentJournalToolCallItem = NativeChatToolMetadata & {
-  kind: 'tool-call'
-  name: string
-  input: unknown
-  /** Provider-supplied identity within this item stream; optional for mixed-version peers. */
-  callId?: string
-  state: AgentJournalToolCallState
-  /** Only beside `state: 'failed'`, which builds that predate it read as they always did. Read
-   *  both through `agentJournalToolCallLifecycle`. */
-  endedAs?: AgentJournalToolCallEnding
-  output?: AgentJournalBoundedPayload
-}
-
-export type AgentJournalDiffItem = {
-  kind: 'diff'
-  path: string
-  /** Every changed file when `path` is a count ("2 files"); absent from older hosts. */
-  paths?: string[]
-  patch: AgentJournalBoundedPayload
-}
 
 export const AGENT_JOURNAL_RESOLUTION_STATES = ['pending', 'resolved', 'cancelled'] as const
 export type AgentJournalResolutionState = (typeof AGENT_JOURNAL_RESOLUTION_STATES)[number]

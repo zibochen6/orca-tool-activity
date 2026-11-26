@@ -1,3 +1,4 @@
+import { withCodexToolObservedTiming } from './codex-tool-observed-timing'
 import {
   AGENT_JOURNAL_THREAD_SCOPE,
   type AgentJournalRowAttribution
@@ -96,12 +97,13 @@ export function createCodexStructuredItemStreams(
 
   const append = (key: string, state: CodexItemStreamState, text: string): boolean => {
     const body = codexRunningStreamBody(state.item, text)
+    const timedBody = body && withCodexToolObservedTiming(body, state.startedAt)
     const observed = state.startedAt === undefined ? {} : { observedAt: state.startedAt }
     const committed = codexShowsLiveText(state.item) ? live.committed(key) : undefined
     const options = { ...attributionOf(key), ...observed }
     return (
-      !body ||
-      appendCodexItemAndPublish(deps.sink, state.identity, body, options, committed).accepted
+      !timedBody ||
+      appendCodexItemAndPublish(deps.sink, state.identity, timedBody, options, committed).accepted
     )
   }
   const isText = (key: string): boolean => codexShowsLiveText(states.get(key)?.item)

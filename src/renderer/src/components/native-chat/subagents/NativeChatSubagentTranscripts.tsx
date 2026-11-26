@@ -9,6 +9,7 @@ import { NativeChatMessageList } from '../NativeChatMessageList'
 import { NativeChatSideChatForkPointContext } from '../messages/actions/native-chat-fork-context'
 import { NativeChatSlackPeopleContext } from '../native-chat-markdown-mentions'
 import { focusNativeChatPromptCard } from '../prompts/use-native-chat-prompt-card-focus'
+import { isWebClientLocation } from '@/app-shell/platform/web-client-location'
 import { NativeChatToolRunWindowProvider } from '../tools/runs/native-chat-tool-run-window-context'
 import { NativeChatGalleryCoveredFocusContext } from '../media/images/gallery/native-chat-image-gallery-context'
 import type { NativeChatFind } from '../viewport/find/use-native-chat-find'
@@ -161,7 +162,17 @@ export function NativeChatSubagentTranscripts({
     return () => cancelAnimationFrame(frame)
   }, [openId, paneKey])
   return (
-    <NativeChatToolRunWindowProvider isVisible={isVisible} find={find}>
+    <NativeChatToolRunWindowProvider
+      isVisible={isVisible}
+      find={find}
+      toolActivity={
+        props.session.agent === 'codex' &&
+        props.structuredAttachments === true &&
+        props.runtimeContext?.target.kind === 'local' &&
+        !props.runtimeContext.connectionId &&
+        !isWebClientLocation()
+      }
+    >
       <div ref={mainRef} className="relative flex min-h-0 flex-1 flex-col">
         {/* Paused under the sheet, as when hidden: its scroll stays where the reader left it. */}
         <NativeChatSlackPeopleContext value={slackPeople}>

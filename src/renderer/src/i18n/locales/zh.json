@@ -20568,6 +20568,16 @@
         "exitPlanMode": "退出计划模式"
       },
       "tool": {
+        "activityAgent": "子代理",
+        "activityCommand": "命令",
+        "activityEdit": "编辑",
+        "activityFailed": "失败",
+        "activityInterrupted": "已中断",
+        "activityOther": "其他",
+        "activityPlan": "计划",
+        "activityRead": "读取",
+        "activitySearch": "搜索",
+        "activityWeb": "网页",
         "result": "结果",
         "exitCode": "退出码 {{value0}}",
         "milliseconds": "{{value0}} 毫秒",

@@ -1,3 +1,4 @@
+import { withCodexJournalItemLifecycle } from '../items/codex-tool-observed-timing'
 import { CodexTurnOrdinals } from './codex-turn-ordinals'
 import type { AgentJournalItemIdentity } from '../../../../shared/agent-session/journal/agent-session-journal-identity'
 import type { AgentJournalRowAttribution } from '../../../../shared/agent-session/journal/agent-session-journal-types'
@@ -35,7 +36,6 @@ import { readCodexDispatchEcho } from '../turns/codex-structured-dispatch-echo'
 import { codexCompletedItem, interruptedCodexItemBody } from '../items/codex-unfinished-item-body'
 import {
   endedJournalReasoning,
-  withJournalReasoningLifecycle,
   type JournalReasoningLifecycle
 } from '../../../native-chat/agent-session-journal/item-lifecycle/journal-reasoning-row'
 import type { CodexRowAttribution } from '../background-work/codex-subagent-linkage'
@@ -109,22 +109,27 @@ export class CodexJournalItems {
       return { handled: true, admission: CODEX_JOURNAL_ADMITTED }
     }
     const itemKey = codexStructuredItemKey(event.threadId, item.id)
-    const active = event.method === 'item/completed' ? this.activeItems.get(itemKey) : undefined
+    const active = this.activeItems.get(itemKey)
+    const completed = event.method === 'item/completed'
     const receivedAt = event.observedAt ?? this.deps.now?.() ?? Date.now()
     const lifecycle: JournalReasoningLifecycle =
       source === 'history'
         ? endedJournalReasoning()
-        : event.method === 'item/completed'
+        : completed
           ? // Without a recorded start, completion cannot establish a duration.
             endedJournalReasoning(active?.startedAt === undefined ? undefined : receivedAt)
           : { state: 'running' }
-    const translated = withItemLifecycle(
+    const startedAt =
+      source === 'history' ? undefined : (active?.startedAt ?? (completed ? undefined : receivedAt))
+    const translated = withCodexJournalItemLifecycle(
       codexCompletedItem(
-        codexJournalItem(item, this.helperName, active?.item),
-        active,
+        codexJournalItem(item, this.helperName, completed ? active?.item : undefined),
+        completed ? active : undefined,
         this.streams
       ),
-      lifecycle
+      lifecycle,
+      startedAt,
+      completed && source === 'live' ? receivedAt : undefined
     )
     const command = readCodexJournalString(item, 'command')
     if (command) {
@@ -143,15 +148,15 @@ export class CodexJournalItems {
           return { handled: true, admission }
         }
         // Preserve the start time while the row waits for its first text.
-        this.track(event.threadId, turnId, item, identity, receivedAt)
+        this.track(event.threadId, turnId, item, identity, startedAt ?? receivedAt)
       }
       return { handled: true, admission: CODEX_JOURNAL_ADMITTED }
     }
     // Coalescing can delay the first write until completion; preserve the item's start time.
-    const startedAt = event.method === 'item/completed' ? active?.startedAt : receivedAt
+    const observedAt = completed ? active?.startedAt : (startedAt ?? receivedAt)
     const admission = this.appendTranslated(event.method, identity, translated, {
       ...this.deps.attributionFor(event.threadId, turnId),
-      ...(startedAt === undefined ? {} : { observedAt: startedAt })
+      ...(observedAt === undefined ? {} : { observedAt })
     })
     if (!admission.accepted) {
       return { handled: true, admission }
@@ -164,7 +169,7 @@ export class CodexJournalItems {
       if (!trimAdmission.accepted) {
         return { handled: true, admission: trimAdmission }
       }
-      this.track(event.threadId, turnId, item, identity, receivedAt)
+      this.track(event.threadId, turnId, item, identity, startedAt ?? receivedAt)
     }
     return { handled: true, admission: CODEX_JOURNAL_ADMITTED }
   }
@@ -302,11 +307,4 @@ export class CodexJournalItems {
     }
     return CODEX_JOURNAL_ADMITTED
   }
-}
-
-function withItemLifecycle(
-  item: ReturnType<typeof codexJournalItem>,
-  state: JournalReasoningLifecycle
-): ReturnType<typeof codexJournalItem> {
-  return item.body ? { ...item, body: withJournalReasoningLifecycle(item.body, state) } : item
 }

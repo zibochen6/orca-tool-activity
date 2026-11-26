@@ -1,13 +1,16 @@
+import { cn } from '@/lib/class-names'
 import { useTranslate } from '@/i18n/use-translate'
 import { NATIVE_CHAT_TOOL_ACTIVITY_COPY } from '../../../../../../shared/native-chat/tools/native-chat-tool-activity'
 
 /** Count failures separately from calls interrupted by Stop. */
 export function NativeChatToolRunCallCounts({
   failed,
-  interrupted
+  interrupted,
+  emphasize = false
 }: {
   failed: number
   interrupted: number
+  emphasize?: boolean
 }): React.JSX.Element | null {
   const t = useTranslate()
   const marks = [
@@ -48,7 +51,12 @@ export function NativeChatToolRunCallCounts({
     <span className="flex h-[1lh] shrink-0 items-center">
       <span
         aria-label={marks.map((mark) => mark.label).join(', ')}
-        className="shrink-0 font-sans text-xs tabular-nums text-chat-foreground-faint transition-colors group-hover/tool-run:text-chat-foreground"
+        className={cn(
+          'shrink-0 font-sans text-xs tabular-nums transition-colors',
+          emphasize && failed > 0
+            ? 'text-destructive'
+            : 'text-chat-foreground-faint group-hover/tool-run:text-chat-foreground'
+        )}
       >
         <span aria-hidden> · </span>
         {marks.map((mark) => mark.text).join(', ')}

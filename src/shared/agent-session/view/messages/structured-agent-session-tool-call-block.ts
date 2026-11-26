@@ -28,17 +28,20 @@ export function structuredAgentSessionToolCallBlock(
   action: StructuredAgentSessionToolAction,
   itemId: string
 ): NativeChatToolCallBlock {
+  const timing = action.observedTiming ? { observedTiming: action.observedTiming } : {}
   if (action.kind === 'diff') {
     return {
       type: 'tool-call',
       name: 'Diff',
       input: { path: action.path, ...(action.paths ? { paths: action.paths } : {}) },
-      callId: itemId
+      callId: itemId,
+      ...timing
     }
   }
   return {
     type: 'tool-call',
     name: action.name,
+    ...timing,
     input: action.input,
     state: action.state,
     ...(action.endedAs !== undefined ? { endedAs: action.endedAs } : {}),

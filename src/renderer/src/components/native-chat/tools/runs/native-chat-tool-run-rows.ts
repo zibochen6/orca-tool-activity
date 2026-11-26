@@ -11,6 +11,7 @@ import {
   buildNativeChatTaskListRows,
   type NativeChatTaskListRow
 } from '../../../../../../shared/native-chat/input/task-lists/native-chat-task-list-history'
+import type { NativeChatToolTiming } from '../../../../../../shared/native-chat/tools/native-chat-tool-identity'
 import type { NativeChatToolRunAsides } from './NativeChatToolRun'
 
 /** One drawn row of an opened run. `focusable`: it renders a control, so keyboard order can land on it. */
@@ -22,6 +23,7 @@ export type NativeChatToolRunRow =
       key: string
       focusable: true
       editKey: string
+      timing?: NativeChatToolTiming
       files: NativeChatEditFile[]
     }
   | {
@@ -100,6 +102,7 @@ export function buildNativeChatToolRunRows({
         key: `edit:${edit.key}`,
         focusable: true,
         editKey: edit.key,
+        timing: block.type === 'tool-call' ? block.observedTiming : undefined,
         files: edit.files
       })
       continue

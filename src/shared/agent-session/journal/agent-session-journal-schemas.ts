@@ -22,13 +22,7 @@ import type {
 } from './agent-session-journal-types'
 import { AGENT_JOURNAL_PROMPT_INTENTS } from './agent-session-journal-types'
 
-const ToolMetadata = {
-  mcpIdentity: z.object({ server: z.string(), tool: z.string() }).optional(),
-  exitCode: z.number().int().optional(),
-  durationMs: z.number().nonnegative().optional(),
-  webSearchResults: z.array(z.object({ title: z.string(), url: z.string() })).optional(),
-  outputImagePaths: z.array(z.string()).optional()
-}
+import { ObservedToolTiming, ToolMetadata } from './agent-journal-tool-schemas'
 
 /** Provider IDs are opaque; reject all-whitespace values without rewriting valid IDs. */
 const ProviderCallId = z
@@ -206,6 +200,7 @@ const KnownItemBody = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('diff'),
+    observedTiming: ObservedToolTiming,
     path: z.string(),
     paths: z.array(z.string()).optional(),
     patch: BoundedPayload

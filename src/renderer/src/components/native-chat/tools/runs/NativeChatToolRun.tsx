@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { NativeChatExpandable } from '../../messages/disclosure/NativeChatExpandable'
 import { useNativeChatDisclosure } from '../../messages/disclosure/native-chat-disclosure-store'
 import { NativeChatTranscriptScrollContext } from '../../viewport/scroll/native-chat-transcript-scroll-context'
-import { Check } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/class-names'
 import { useTranslate } from '@/i18n/use-translate'
 import { recomputeOn } from '@/lib/recompute-on'
@@ -29,6 +29,11 @@ import { NativeChatToolRunMemberList } from './NativeChatToolRunMemberList'
 import { NativeChatBrowserRunPageButton } from './NativeChatBrowserPageButton'
 import { NativeChatImageAttachments } from '../../media/images/NativeChatImageAttachments'
 import { nativeChatToolRunViewedImages } from '../../../../../../shared/native-chat/tools/native-chat-tool-viewed-images'
+import {
+  NativeChatToolActivityContext,
+  useNativeChatToolDuration
+} from '../native-chat-tool-activity-context'
+import { NativeChatToolRunSummary } from './NativeChatToolRunSummary'
 import type { RuntimeFileOperationArgs } from '@/runtime/files/runtime-file-client-types'
 
 /** Insert keyed asides before their block or after the final block. */
@@ -110,6 +115,7 @@ export function NativeChatToolRun({
     ...subagentRows,
     ...backgroundTasks.map((task) => <NativeChatBackgroundTaskRun key={task.taskId} block={task} />)
   ]
+  const { enabled } = useContext(NativeChatToolActivityContext)
   const {
     asks,
     work: headerBlocks,
@@ -125,6 +131,14 @@ export function NativeChatToolRun({
   } = useMemo(
     () => nativeChatToolRunHeader(blocks, { activeTurnIsWorking, trailing }),
     [activeTurnIsWorking, blocks, trailing]
+  )
+  const calls = useMemo(() => headerBlocks.filter(isToolCallBlock), [headerBlocks])
+  const compactSummary = enabled && !open && !live && callCount > 0
+  const runningCall =
+    enabled && live ? calls.findLast((call) => call.state === 'running') : undefined
+  const liveDuration = useNativeChatToolDuration(
+    runningCall?.observedTiming,
+    runningCall !== undefined
   )
   const viewedImages = useMemo(() => nativeChatToolRunViewedImages(headerBlocks), [headerBlocks])
   const hasAskCall = asks.length > 0
@@ -168,12 +182,25 @@ export function NativeChatToolRun({
               }
               setOpen(!open)
             }}
-            className="group/tool-run flex min-h-6 min-w-0 flex-1 items-start gap-1.5 rounded-md py-0.5 text-left text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className={cn(
+              'group/tool-run flex min-h-6 min-w-0 flex-1 items-start gap-1.5 rounded-md py-0.5 text-left text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+              enabled && 'items-baseline hover:bg-accent/20',
+              compactSummary && 'bg-accent/30 px-1.5'
+            )}
             aria-expanded={open}
             aria-live="polite"
             data-native-chat-tool-run-state={live ? 'live' : 'settled'}
           >
-            {settledHeaderIcon ? (
+            {enabled ? (
+              <ChevronRight
+                aria-hidden
+                className={cn(
+                  'size-3.5 shrink-0 self-center text-chat-foreground-faint motion-safe:transition-transform',
+                  open && 'rotate-90'
+                )}
+              />
+            ) : null}
+            {settledHeaderIcon && !compactSummary ? (
               <span className="flex h-[1lh] shrink-0 items-center">
                 <NativeChatToolRunIcon
                   iconName={settledHeaderIcon}
@@ -182,22 +209,35 @@ export function NativeChatToolRun({
               </span>
             ) : null}
             {/* Keep the collapsed header bounded; the tool detail carries the full command. */}
-            <span
-              className={cn(
-                'min-w-0 line-clamp-2 whitespace-normal break-words text-sm leading-relaxed transition-colors',
-                live
-                  ? 'max-w-[72%] shrink-0 animate-pulse text-chat-foreground motion-reduce:animate-none'
-                  : 'min-w-0 text-chat-foreground-faint group-hover/tool-run:text-chat-foreground'
-              )}
-            >
-              {runSentence ?? fallbackLabel}
-            </span>
+            {compactSummary ? (
+              <NativeChatToolRunSummary calls={calls} />
+            ) : (
+              <span
+                className={cn(
+                  'min-w-0 line-clamp-2 whitespace-normal break-words text-sm leading-relaxed transition-colors',
+                  live
+                    ? 'max-w-[72%] shrink-0 animate-pulse text-chat-foreground motion-reduce:animate-none'
+                    : 'min-w-0 text-chat-foreground-faint group-hover/tool-run:text-chat-foreground'
+                )}
+              >
+                {runSentence ?? fallbackLabel}
+              </span>
+            )}
+            {liveDuration ? (
+              <span
+                aria-live="off"
+                className="shrink-0 text-xs tabular-nums text-chat-foreground-faint"
+              >
+                {liveDuration}
+              </span>
+            ) : null}
             <NativeChatToolRunCallCounts
               failed={failedCallCount}
               interrupted={interruptedCallCount}
+              emphasize={enabled}
             />
             {/* Mark only stated success after settlement; idle gaps between live calls are not completion. */}
-            {!live && runSucceeded ? (
+            {!compactSummary && !live && runSucceeded ? (
               <span className="flex h-[1lh] shrink-0 items-center">
                 <Check aria-hidden className="size-3 shrink-0 text-chat-foreground-faint" />
               </span>

@@ -14,6 +14,7 @@ import {
   codexStreamingJournalItem,
   type CodexJournalItem
 } from './codex-structured-item-translation'
+import { withCodexToolObservedTiming } from './codex-tool-observed-timing'
 import type { CodexActiveJournalItem } from '../journal/codex-structured-journal-contracts'
 
 /** Prefer streamed text so unfinished rows retain partial output. */
@@ -57,9 +58,11 @@ export function interruptedCodexItemBody(
     return null
   }
   if (body.kind === 'tool-call') {
-    return end.call
-      ? endedRunningAgentJournalToolCall(body, end.call)
-      : { ...body, state: 'failed' }
+    return withCodexToolObservedTiming(
+      end.call ? endedRunningAgentJournalToolCall(body, end.call) : { ...body, state: 'failed' },
+      active.startedAt,
+      end.call === 'interrupted' ? end.at : undefined
+    )
   }
   if (body.kind === 'message') {
     return withJournalReasoningLifecycle(body, endedJournalReasoning(end.at))

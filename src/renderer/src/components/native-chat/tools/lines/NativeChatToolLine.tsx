@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { useContext, useMemo } from 'react'
+import { ChevronRight, CircleAlert, CircleStop, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/class-names'
 import { useTranslate } from '@/i18n/use-translate'
 import {
@@ -28,6 +28,14 @@ import {
 import { NativeChatExpandable } from '../../messages/disclosure/NativeChatExpandable'
 import { useNativeChatDisclosure } from '../../messages/disclosure/native-chat-disclosure-store'
 import { NativeChatToolOutput } from './NativeChatToolOutput'
+
+import { agentJournalToolCallLifecycle } from '../../../../../../shared/agent-session/journal/agent-journal-tool-call-lifecycle'
+import { nativeChatToolCategory } from '../../../../../../shared/native-chat/tools/native-chat-tool-icon'
+import {
+  NativeChatToolActivityContext,
+  useNativeChatToolDuration
+} from '../native-chat-tool-activity-context'
+import { nativeChatToolCategoryTone } from '../native-chat-tool-category-tone'
 
 const TARGET_CLASS =
   'min-w-0 truncate text-chat-foreground transition-colors group-hover/tool-line:text-chat-foreground-strong'
@@ -95,6 +103,12 @@ export function NativeChatToolLine({
     [block, result]
   )
   const isCall = isToolCallBlock(block)
+  const { enabled } = useContext(NativeChatToolActivityContext)
+  const lifecycle = enabled && isCall ? agentJournalToolCallLifecycle(block) : undefined
+  const duration = useNativeChatToolDuration(
+    enabled && isCall ? block.observedTiming : undefined,
+    lifecycle === 'running'
+  )
   if (!view) {
     return null
   }
@@ -102,6 +116,26 @@ export function NativeChatToolLine({
     ? block.name
     : t('components.native-chat.tool.result', NATIVE_CHAT_TOOL_ACTIVITY_COPY.result)
   const { label: sharedLabel, body, resultPreview, failed, results, hasDetail } = view
+  const status =
+    lifecycle === 'running'
+      ? {
+          icon: Loader2,
+          text: t('components.native-chat.tool.row.running', 'Running'),
+          tone: 'text-chat-foreground-faint motion-safe:animate-spin'
+        }
+      : lifecycle === 'interrupted'
+        ? {
+            icon: CircleStop,
+            text: t('components.native-chat.tool.activityInterrupted', 'Interrupted'),
+            tone: 'text-chat-warning'
+          }
+        : enabled && failed
+          ? {
+              icon: CircleAlert,
+              text: t('components.native-chat.tool.activityFailed', 'Failed'),
+              tone: 'text-destructive'
+            }
+          : null
   const label = sharedLabel && {
     ...sharedLabel,
     verb: sharedLabel.verb === null ? null : nativeChatToolRowVerb(sharedLabel.verb, t)
@@ -126,7 +160,15 @@ export function NativeChatToolLine({
             mcpIdentity={block.mcpIdentity}
             rowWord={name}
             input={block.input}
-            className={failed ? 'text-destructive/70' : 'text-chat-foreground-faint'}
+            className={
+              enabled
+                ? nativeChatToolCategoryTone[
+                    nativeChatToolCategory(name, block.mcpIdentity, block.input) ?? 'other'
+                  ]
+                : failed
+                  ? 'text-destructive/70'
+                  : 'text-chat-foreground-faint'
+            }
           />
         ) : (
           /* Translated result labels identify no tool category; reserve an empty slot for alignment. */
@@ -159,7 +201,16 @@ export function NativeChatToolLine({
           </span>
         ) : null}
         <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
-          {isCall ? <NativeChatCommandMetadata block={block} /> : null}
+          {status ? (
+            <span className="flex items-center gap-1 text-xs">
+              <status.icon className={cn('size-3.5', status.tone)} aria-hidden />
+              <span className="text-chat-foreground-faint">{status.text}</span>
+            </span>
+          ) : null}
+          {isCall ? <NativeChatCommandMetadata block={block} showDuration={!enabled} /> : null}
+          {duration ? (
+            <span className="text-xs tabular-nums text-chat-foreground-faint">{duration}</span>
+          ) : null}
           {hasDetail ? (
             <ChevronRight
               className={cn(

@@ -65,6 +65,7 @@ export function NativeChatToolRunMemberList({
             <NativeChatDiffCard
               key={`${row.editKey}:${fileIndex}`}
               file={file}
+              observedTiming={fileIndex === 0 ? row.timing : undefined}
               revealSignal={
                 revealedDiff?.editKey === row.editKey && revealedDiff.fileIndex === fileIndex
                   ? revealedDiff.requestId
