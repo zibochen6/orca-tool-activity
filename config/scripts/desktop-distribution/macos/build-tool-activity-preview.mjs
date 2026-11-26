@@ -1,10 +1,13 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const version = process.argv[2]
 if (process.platform !== 'darwin' || process.arch !== 'arm64') {
   throw new Error('Build this preview on an Apple Silicon Mac.')
+}
+if (process.versions.node.split('.')[0] !== '24') {
+  throw new Error('Build this preview with Node.js 24.')
 }
 if (!/^\d+\.\d+\.\d+-activity\.[1-9]\d*$/.test(version ?? '')) {
   throw new Error(
@@ -46,10 +49,9 @@ for (const script of [
 }
 mkdirSync(output, { recursive: true })
 execFileSync(
-  'pnpm',
+  process.execPath,
   [
-    'exec',
-    'electron-builder',
+    resolve('node_modules/electron-builder/cli.js'),
     '--config',
     'config/electron-builder.config.cjs',
     '--mac',
@@ -63,19 +65,12 @@ execFileSync(
   { env, stdio: 'inherit' }
 )
 
+const app = join(output, 'mac-arm64', 'Orca Tool Activity.app')
+renameSync(join(output, 'mac-arm64', 'Orca.app'), app)
 const archive = 'Orca-Tool-Activity-macos-arm64.zip'
-execFileSync(
-  'ditto',
-  [
-    '-c',
-    '-k',
-    '--sequesterRsrc',
-    '--keepParent',
-    join(output, 'mac-arm64', 'Orca Tool Activity.app'),
-    join(output, archive)
-  ],
-  { stdio: 'inherit' }
-)
+execFileSync('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, join(output, archive)], {
+  stdio: 'inherit'
+})
 const checksums = execFileSync('shasum', ['-a', '256', archive], { cwd: output, encoding: 'utf8' })
 writeFileSync(join(output, 'SHA256SUMS'), checksums)
 console.log(output)
