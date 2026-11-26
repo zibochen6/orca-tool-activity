@@ -131,7 +131,11 @@ const devChannelRepo = isHourlyChannel
     : isAdhocChannel
       ? 'orca-adhoc'
       : null
-const appId = 'com.stablyai.orca'
+const activityVersion = process.env.ORCA_TOOL_ACTIVITY_VERSION
+if (activityVersion && !/^\d+\.\d+\.\d+-activity\.[1-9]\d*$/.test(activityVersion)) {
+  throw new Error('ORCA_TOOL_ACTIVITY_VERSION must have the form X.Y.Z-activity.N')
+}
+const appId = activityVersion ? 'com.zibochen6.orca-tool-activity' : 'com.stablyai.orca'
 const featureWallResources = {
   from: 'resources/onboarding/feature-wall',
   to: 'onboarding/feature-wall'
@@ -269,14 +273,16 @@ const ORCA_MAC_TEAM_ID = '6CX3WHS9HZ'
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId,
-  productName: 'Orca',
-  protocols: [{ name: 'Orca', schemes: ['orca'] }],
+  productName: activityVersion ? 'Orca Tool Activity' : 'Orca',
+  ...(activityVersion ? {} : { protocols: [{ name: 'Orca', schemes: ['orca'] }] }),
   toolsets: { appimage: '1.0.3' },
-  ...(devChannelBuildVersion
-    ? { extraMetadata: { version: devChannelBuildVersion } }
-    : localBuildVersion
-      ? { extraMetadata: { version: localBuildVersion } }
-      : {}),
+  ...(activityVersion
+    ? { extraMetadata: { version: activityVersion } }
+    : devChannelBuildVersion
+      ? { extraMetadata: { version: devChannelBuildVersion } }
+      : localBuildVersion
+        ? { extraMetadata: { version: localBuildVersion } }
+        : {}),
   directories: {
     buildResources: 'resources/build'
   },
@@ -713,6 +719,7 @@ module.exports = {
     hardenedRuntime: isMacRelease,
     // Dev notarization preserves TCC identifier/team identity across cdhash changes; unticketed hourly updates otherwise lose folder grants with EPERM and no prompt.
     notarize: isMacRelease,
+    ...(activityVersion ? { identity: '-', executableName: 'Orca' } : {}),
     extraResources: [
       ...commonExtraResources,
       ...createPackagedRuntimeNodeModuleResources('darwin'),
@@ -862,13 +869,15 @@ module.exports = {
   // Dual-arch builds need target node-pty rebuilds or Intel Macs get arm64 binaries and posix_spawnp failure.
   // beforeBuild performs targeted rebuild then returns false to skip optional cpu-features.
   npmRebuild: true,
-  publish: {
-    provider: 'github',
-    owner: 'stablyai',
-    repo: devChannelRepo ?? 'orca',
-    // Keep main-repo releases draft until release-cut verifies all assets; early --publish always would expose missing Windows installers.
-    releaseType: devChannelRepo ? 'prerelease' : 'draft'
-  }
+  publish: activityVersion
+    ? null
+    : {
+        provider: 'github',
+        owner: 'stablyai',
+        repo: devChannelRepo ?? 'orca',
+        // Keep main-repo releases draft until release-cut verifies all assets; early --publish always would expose missing Windows installers.
+        releaseType: devChannelRepo ? 'prerelease' : 'draft'
+      }
 }
 
 // Stamp the effective channel version where node-mode CLI code can read it.

@@ -1,3 +1,4 @@
+import { isToolActivityBuild } from '../../startup/tool-activity-build'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
@@ -70,6 +71,9 @@ export abstract class CliInstallLocation {
       // Why: development builds must not claim the production shell command.
       return DEV_COMMAND_NAME
     }
+    if (this.platform === 'darwin' && isToolActivityBuild()) {
+      return 'orca-tool-activity'
+    }
     return this.platform === 'linux' ? LINUX_CLI_COMMAND_NAME : 'orca'
   }
 
@@ -89,10 +93,19 @@ export abstract class CliInstallLocation {
     this.commandPathOverride =
       options.commandPathOverride ?? process.env.ORCA_CLI_INSTALL_PATH ?? null
     // Resolve once for hot status reads; Apple Silicon Macs may lack /usr/local/bin.
-    const candidateMacPath = options.defaultMacCommandPath ?? DEFAULT_MAC_COMMAND_PATH
+    const candidateMacPath =
+      options.defaultMacCommandPath ??
+      (this.commandName === 'orca-tool-activity'
+        ? join(dirname(DEFAULT_MAC_COMMAND_PATH), this.commandName)
+        : DEFAULT_MAC_COMMAND_PATH)
     this.macCommandPath = existsSync(dirname(candidateMacPath))
       ? candidateMacPath
-      : join(this.homePath, '.local', 'bin', 'orca')
+      : join(
+          this.homePath,
+          '.local',
+          'bin',
+          this.commandName === 'orca-tool-activity' ? this.commandName : 'orca'
+        )
     this.privilegedRunner = options.privilegedRunner ?? runMacPrivilegedCommand
     this.userPathReader = options.userPathReader ?? readWindowsUserPathRegistry
     this.userPathMutationReader =

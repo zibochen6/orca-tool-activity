@@ -1,3 +1,4 @@
+import { isToolActivityBuild } from '../../startup/tool-activity-build'
 import { app } from 'electron'
 import { isMacInstallRequested } from '../mac-install/updater-mac-install'
 import type { UpdateCheckOptions } from '../../../shared/updater/update-status-types'
@@ -19,7 +20,7 @@ export abstract class UpdaterMenuChecks extends UpdaterScheduling {
     ) {
       return
     }
-    if (!app.isPackaged) {
+    if (!app.isPackaged || isToolActivityBuild()) {
       this.sendStatus({ state: 'not-available', userInitiated: true })
       return
     }

@@ -39,6 +39,9 @@ if [ -z "$APP_PATH" ]; then
 fi
 
 CONTENTS="$APP_PATH/Contents"
+if [[ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$CONTENTS/Info.plist" 2>/dev/null || true)" == com.zibochen6.orca-tool-activity ]]; then
+	export ORCA_USER_DATA_PATH="$HOME/Library/Application Support/Orca Tool Activity"
+fi
 ELECTRON="$CONTENTS/MacOS/Orca"
 CLI="$CONTENTS/Resources/app.asar.unpacked/out/cli/index.js"
 

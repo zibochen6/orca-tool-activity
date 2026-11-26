@@ -1,4 +1,5 @@
 import { app, ipcMain } from 'electron'
+import { isToolActivityBuild } from '../../startup/tool-activity-build'
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
 import type {
@@ -145,6 +146,9 @@ function setupAutoUpdaterWithAppProxy(
   nativeSettings: NativeSettingsProjection,
   options?: UpdaterSetupHooks
 ): void {
+  if (isToolActivityBuild()) {
+    return
+  }
   // Starts synchronously, so the session request guard holds the first update check until it settles.
   void applyProxyToElectronUpdaterSession(nativeSettings.getSettings())
   setupAutoUpdater(mainWindow, buildUpdaterSetupOptions(nativeSettings, options))
@@ -256,6 +260,9 @@ export function registerUpdaterHandlers(): void {
       channel: ReleaseChannel,
       options?: { force?: boolean }
     ): Promise<ReleaseBuildListResult> => {
+      if (isToolActivityBuild()) {
+        return { ok: true, channel, builds: [] }
+      }
       if (!RELEASE_CHANNELS.includes(channel)) {
         return { ok: false, channel, ...updaterCodedMessage('unknownReleaseChannel', { channel }) }
       }

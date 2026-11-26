@@ -2,10 +2,11 @@ import { createContext, useContext, useSyncExternalStore } from 'react'
 import { formatToolDuration } from '../../../../../shared/native-chat/tools/native-chat-tool-identity'
 import type { NativeChatToolTiming } from '../../../../../shared/native-chat/tools/native-chat-tool-identity'
 import { useTranslate } from '@/i18n/use-translate'
+import { installWindowVisibilityInterval } from '@/lib/window-activity/window-visibility-interval'
 
 export function createNativeChatToolClock() {
   let now = 0
-  let timer: ReturnType<typeof setInterval> | undefined
+  let stopClock: (() => void) | undefined
   const listeners = new Set<() => void>()
   const tick = (): void => {
     now = Date.now()
@@ -14,15 +15,15 @@ export function createNativeChatToolClock() {
   return {
     subscribe(listener: () => void): () => void {
       listeners.add(listener)
-      if (timer === undefined) {
+      if (!stopClock) {
         now = Date.now()
-        timer = setInterval(tick, 1000)
+        stopClock = installWindowVisibilityInterval({ run: tick, intervalMs: 1000 })
       }
       return () => {
         listeners.delete(listener)
         if (listeners.size === 0) {
-          clearInterval(timer)
-          timer = undefined
+          stopClock?.()
+          stopClock = undefined
           now = 0
         }
       }

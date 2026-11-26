@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { isToolActivityBuild } from './tool-activity-build'
 import { installBestEffortSocketTypeOfService } from '../network/best-effort-socket-type-of-service'
 import { guardExternalOpensInE2E } from './testing/e2e-external-open-guard'
 import { quitProcess } from './quit/process-quit-request'
@@ -217,6 +218,10 @@ export function configureDevUserDataPath(isDev: boolean): void {
     return
   }
 
+  if (isToolActivityBuild()) {
+    app.setPath('userData', join(app.getPath('appData'), 'Orca Tool Activity'))
+    return
+  }
   if (!isDev) {
     return
   }
@@ -256,8 +261,8 @@ export function configureOrcaUserDataPathEnv(): void {
 
 export function shouldInstallManagedHooks(isDev: boolean): boolean {
   void isDev
-  // Codex hooks now target Orca-owned homes; retain installation until every agent has its own seam.
-  return true
+  // The independent build must not rewrite the official app's shared CLI hooks.
+  return !isToolActivityBuild()
 }
 
 export function installDevParentDisconnectQuit(isDev: boolean): void {

@@ -1,3 +1,4 @@
+import { isToolActivityBuild } from './tool-activity-build'
 import { app, session } from 'electron'
 import { configureMacMenuDeadKeyGuard } from '../menu/macos-menu-dead-key'
 import { applyBackgroundActivationPolicy } from '../window/activation/foreground-activation-policy'
@@ -110,7 +111,9 @@ export async function initializeReadyFoundation(): Promise<void> {
     app.setAppUserModelId(app.isPackaged ? identity.appUserModelId : process.execPath)
   }
   // Post-ready naming preserves packaged Keychain identity; dev already renamed before ready.
-  app.setName(identity.appName)
+  if (!isToolActivityBuild()) {
+    app.setName(identity.appName)
+  }
   // Older builds put an unread count on the dock icon; clear any that is still showing.
   if (process.platform === 'darwin') {
     app.dock?.setBadge('')
